@@ -3,105 +3,215 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Madrid en relieve 3D</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chonburi&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chonburi&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap">
 <style>
-/* Relieve a pantalla completa; panel de papel claro arriba a la izquierda; rótulos como en un mapa */
+/* Relieve a pantalla completa; panel como la leyenda de un mapa topográfico: hoja lisa, un solo radio chico,
+   sin bandejas ni interruptores de sistema. Rótulos: tinta oscura con halo claro. Aspecto claro único, a propósito. */
 :root {
-  --papel: rgba(246, 246, 242, 0.92); --tinta: #20251f; --suave: #5d655a; --linea: #cfd3c8; --acento: #2f5d4d;
+  --papel: #fafaf7; --papel-2: #eef0ea; --tinta: #1f2620; --suave: #555e53; --linea: #dde1d7;
+  --acento: #2f5d4d; --rio: #3f7fae; --agua: #23465c; --limite: #682c2c; --roca: #3b3427;
   --cielo-alto: #8fb0cf; --cielo-bajo: #e9eef1;
   --serif: "Chonburi", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --r: 6px; --sombra: 0 1px 3px rgba(20, 30, 25, .14), 0 4px 14px rgba(20, 30, 25, .10);
+  --halo: #fbfbf8;
   color-scheme: light;
 }
 html, body { height: 100%; }
 [hidden] { display: none !important; }
-body { margin: 0; overflow: hidden; background: var(--cielo-bajo); color: var(--tinta); font: 14px/1.5 var(--sans); }
+body { margin: 0; overflow: hidden; background: var(--cielo-bajo); color: var(--tinta); font: 14px/1.45 var(--sans); }
 #escena { position: fixed; inset: 0; background: linear-gradient(180deg, var(--cielo-alto) 0%, var(--cielo-bajo) 62%); }
 #escena canvas { display: block; }
-#rotulos { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.r { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; color: #fff; transform-origin: 50% 100%;
-  text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); transition: opacity .25s; will-change: transform; }
-.r::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 5px; height: 5px; margin-left: -2.5px;
-  border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
-.r.pico { font: 400 14px var(--serif); letter-spacing: .01em; }
-.r.pico::after { background: #222; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
-.r.pico span { font-style: normal; font-size: 12px; opacity: .85; margin-left: .35em; }
-.r.pueblo { font: 700 12.5px var(--sans); }
-.r.ciudad { font: 700 14px var(--sans); }
-.r.capital { font: 400 18px var(--serif); letter-spacing: .14em; }
 
-#panel { position: fixed; z-index: 2; background: var(--papel); backdrop-filter: blur(6px);
-  top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(14px, env(safe-area-inset-left, 0px));
-  width: 17.5rem; max-height: calc(100% - 28px); overflow: auto; padding: 1rem 1.1rem 1.1rem;
-  border: 1px solid var(--linea); }
-h1 { font: 400 1.35rem/1.15 var(--serif); margin: 0 0 .15rem; }
-.sub { color: var(--suave); font-size: .85rem; margin: 0 0 .9rem; }
-.grupo { border-top: 1px solid var(--linea); padding-top: .65rem; margin-top: .65rem; }
-.et { font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; color: var(--suave); margin-bottom: .35rem; }
-.estaciones { display: flex; flex-wrap: wrap; gap: .1rem .9rem; }
-button { font: 700 .92rem var(--sans); color: var(--tinta); background: none; border: 0; padding: .1rem 0; cursor: pointer; }
-.estaciones button { border-bottom: 2px solid transparent; }
+/* ---------- Rótulos del mapa ---------- */
+#rotulos { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.r { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; color: var(--tinta);
+  font-family: var(--sans); transform-origin: 50% 100%; transition: opacity .25s; will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 0 0 1px var(--halo), 1px 0 0 var(--halo), -1px 0 0 var(--halo), 0 1px 0 var(--halo), 0 -1px 0 var(--halo),
+    1px 1px 0 var(--halo), -1px -1px 0 var(--halo), 1px -1px 0 var(--halo), -1px 1px 0 var(--halo), 0 0 6px rgba(251,251,248,.85); }
+.r::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 6px; height: 6px; margin-left: -3px;
+  border-radius: 50%; background: var(--tinta); box-shadow: 0 0 0 1.5px var(--halo); }
+.r.pico { font: italic 400 12.5px/1.2 var(--sans); color: var(--roca); letter-spacing: .01em; }
+.r.pico::after { width: 0; height: 0; border-radius: 0; background: none; box-shadow: none; margin-left: -4px; bottom: -8px;
+  border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid var(--roca);
+  filter: drop-shadow(0 0 1px var(--halo)) drop-shadow(0 0 1px var(--halo)); }
+.r.pico span { font-style: normal; font-size: 11px; color: var(--suave); margin-left: .3em; font-variant-numeric: tabular-nums; }
+.r.pueblo { font: 400 12.5px/1.2 var(--sans); }
+.r.pueblo::after { width: 5px; height: 5px; margin-left: -2.5px; }
+.r.ciudad { font: 700 14px/1.2 var(--sans); }
+.r.capital { font: 700 16px/1.2 var(--sans); letter-spacing: .16em; }
+.r.capital::after { width: 9px; height: 9px; margin-left: -4.5px; bottom: -10px; background: var(--halo); box-shadow: inset 0 0 0 2.5px var(--tinta), 0 0 0 1px var(--halo); }
+
+/* ---------- Panel ---------- */
+#panel { position: fixed; z-index: 2; display: flex; flex-direction: column;
+  top: calc(env(safe-area-inset-top, 0px) + 16px); left: max(16px, env(safe-area-inset-left, 0px));
+  width: 18.5rem; max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  background: var(--papel); border-radius: var(--r); box-shadow: var(--sombra); overflow: hidden; }
+.cabecera { display: grid; grid-template-columns: 1fr auto; align-items: start; column-gap: 12px; padding: 16px 14px 14px 20px; border-bottom: 1px solid var(--linea); }
+.cabecera .titulos { display: contents; }
+.cabecera h1 { grid-column: 1; grid-row: 1; min-width: 0; }
+#plegar { grid-column: 2; grid-row: 1; }
+.sub { grid-column: 1 / -1; grid-row: 2; white-space: nowrap; }
+h1 { font: 400 1.3rem/1.15 var(--serif); margin: 0 0 4px; text-wrap: balance; }
+.sub { color: var(--suave); font-size: .86rem; margin: 0; }
+.sub b { white-space: nowrap; font-weight: 700; color: var(--tinta); font-variant-numeric: tabular-nums; }
+#plegar { flex: none; width: 32px; height: 32px; margin: -4px 0 0; border-radius: var(--r); display: grid; place-items: center; color: var(--suave); }
+#plegar:hover { background: var(--papel-2); color: var(--tinta); }
+#plegar svg { transition: transform .2s; }
+#panel.plegado #plegar svg { transform: rotate(180deg); }
+#panel.plegado .cuerpo { display: none; }
+#panel.plegado .cabecera { border-bottom: 0; }
+
+.cuerpo { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 18px 20px 16px; display: flex; flex-direction: column; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: #b9bfb3 transparent;
+  background:
+    linear-gradient(var(--papel) 40%, rgba(250,250,247,0)) top / 100% 28px no-repeat local,
+    linear-gradient(rgba(250,250,247,0), var(--papel) 60%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(20,30,25,.18), rgba(20,30,25,0)) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(20,30,25,.18), rgba(20,30,25,0)) bottom / 100% 12px no-repeat scroll; }
+.cuerpo::-webkit-scrollbar { width: 6px; }
+.cuerpo::-webkit-scrollbar-thumb { background: #b9bfb3; border-radius: 3px; }
+/* Dos grupos: cómo se ve el relieve / qué se muestra y adónde ir. Más aire entre grupos que dentro. */
+.grupo { display: flex; flex-direction: column; gap: 18px; }
+.grupo + .grupo, .pie { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--linea); }
+.seccion { display: flex; flex-direction: column; gap: 8px; }
+.et { font-size: .93rem; font-weight: 700; color: var(--tinta); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.et .actual, .valor { font-weight: 400; color: var(--suave); font-variant-numeric: tabular-nums; }
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 2px; }
+
+/* Estación: cuatro íconos sueltos; la activa en color y subrayada */
+.estaciones { display: grid; grid-template-columns: repeat(4, 1fr); }
+.estaciones button { padding: 6px 0 8px; color: #8a9287; display: grid; place-items: center; border-bottom: 2px solid var(--linea); transition: color .15s, border-color .15s; }
+.estaciones button:hover { color: var(--tinta); }
 .estaciones button[aria-pressed="true"] { color: var(--acento); border-bottom-color: var(--acento); }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-.fila { display: flex; align-items: center; gap: .6rem; }
-input[type=range] { flex: 1; min-width: 0; accent-color: var(--acento); }
-.valor { font-variant-numeric: tabular-nums; width: 2.6rem; text-align: right; }
-label.chk { display: flex; align-items: center; gap: .5rem; padding: .12rem 0; cursor: pointer; }
-input[type=checkbox] { accent-color: var(--acento); width: 1rem; height: 1rem; margin: 0; }
-.vistas { display: grid; grid-template-columns: 1fr 1fr; gap: .15rem .8rem; }
-.vistas button { font-weight: 400; text-align: left; color: var(--acento); }
-.vistas button:hover { text-decoration: underline; }
-.ayuda { color: var(--suave); font-size: .8rem; margin-top: .8rem; }
-.fuentes { color: var(--suave); font-size: .72rem; margin-top: .5rem; }
-#plegar { display: none; float: right; font-weight: 400; color: var(--suave); }
+.estaciones svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Exageración */
+input[type=range] { width: 100%; margin: 2px 0 0; accent-color: var(--acento); }
+.marcas { display: flex; justify-content: space-between; font-size: .8rem; color: var(--suave); font-variant-numeric: tabular-nums; padding: 0 2px; }
+
+/* Capas como leyenda: casilla, muestra, nombre */
+.capas { display: flex; flex-direction: column; }
+label.capa { display: flex; align-items: center; gap: 10px; min-height: 32px; cursor: pointer; }
+label.capa:hover .nom { text-decoration: underline; text-decoration-color: var(--linea); text-underline-offset: 3px; }
+label.capa .nom { flex: 1; line-height: 1.3; }
+label.capa .nom small { display: block; font-size: .8rem; color: var(--suave); }
+label.capa input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--acento); }
+.muestra { width: 20px; height: 14px; flex: none; display: grid; place-items: center; }
+.m-pico { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--roca); }
+.m-pueblo { width: 7px; height: 7px; border-radius: 50%; background: var(--tinta); }
+.m-rio { width: 20px; height: 3px; border-radius: 2px; background: var(--rio); }
+.m-embalse { width: 16px; height: 11px; border-radius: 40% 55% 45% 50%; background: var(--agua); }
+.m-limite { width: 20px; height: 0; border-top: 2px dashed var(--limite); }
+label.capa input:not(:checked) ~ .muestra, label.capa input:not(:checked) ~ .nom { opacity: .4; }
+
+/* Ir a: índice de lugares en dos columnas */
+.vistas { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+.vistas button { text-align: left; padding: 4px 0; color: var(--tinta); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .15s; }
+.vistas button:hover { text-decoration-color: var(--suave); }
+.vistas button[aria-pressed="true"] { color: var(--acento); font-weight: 700; text-decoration-color: var(--acento); }
+.vistas-sel { display: none; width: 100%; font: 400 .95rem var(--sans); color: var(--tinta); background: #fff; border: 1px solid #c9cec3; border-radius: var(--r); padding: 9px 36px 9px 12px; appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23555e53' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+.vistas-sel:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* Ayuda y créditos */
+.pie { display: flex; flex-direction: column; gap: 10px; }
+.gestos { margin: 0; padding: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .84rem; color: var(--suave); }
+.gestos dt { color: var(--tinta); }
+.gestos dd { margin: 0; }
+details { font-size: .8rem; color: var(--suave); }
+summary { cursor: pointer; padding: 2px 0; width: fit-content; }
+summary:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 2px; }
+details p { margin: 6px 0 0; line-height: 1.5; }
+
 #carga { position: fixed; inset: 0; display: grid; place-items: center; z-index: 3; pointer-events: none;
   font: 400 1.2rem var(--serif); color: var(--tinta); }
 
 @media (max-width: 640px) {
-  #panel { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); left: max(10px, env(safe-area-inset-left, 0px));
-    right: max(10px, env(safe-area-inset-right, 0px)); width: auto; max-height: 55%; padding: .8rem .9rem; }
-  #plegar { display: inline; }
-  #panel.plegado .cuerpo { display: none; }
-  .sub { margin-bottom: .3rem; }
+  #panel { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+    width: auto; max-height: 58%; }
+  .cabecera { padding: 12px 10px 12px 16px; }
+  h1 { font-size: 1.1rem; }
+  .cuerpo { padding: 16px 16px 14px; }
+  .gestos-raton { display: none; }
+  .vistas { display: none; }
+  .vistas-sel { display: block; }
 }
-@media (prefers-reduced-motion: reduce) { .r { transition: none; } }
+@media (min-width: 641px) { .gestos-tactil { display: none; } }
+@media (prefers-reduced-motion: reduce) { .r, #plegar svg, .estaciones button { transition: none; } }
 </style>
 
 <div id="escena"></div>
 <div id="rotulos"></div>
 <div id="carga">Cargando el relieve…</div>
 
-<aside id="panel">
-  <button id="plegar" aria-expanded="true">ocultar</button>
-  <h1>Madrid en relieve</h1>
-  <p class="sub">La Comunidad de Madrid y su sierra, del Tajo (377 m) a Peñalara (2.428 m)</p>
-  <div class="cuerpo">
+<aside id="panel" aria-label="Controles del mapa">
+  <div class="cabecera">
+    <div class="titulos">
+      <h1>Madrid en relieve</h1>
+      <p class="sub">Del Tajo (<b>377 m</b>) a Peñalara (<b>2.428 m</b>)</p>
+    </div>
+    <button id="plegar" aria-expanded="true" aria-controls="cuerpo" aria-label="Ocultar controles">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="cuerpo" id="cuerpo">
     <div class="grupo">
-      <div class="et">Estación</div>
-      <div class="estaciones" role="group" aria-label="Estación">
-        <button id="e-0" data-e="0" aria-pressed="false">Primavera</button>
-        <button id="e-1" data-e="1" aria-pressed="false">Verano</button>
-        <button id="e-2" data-e="2" aria-pressed="false">Otoño</button>
-        <button id="e-3" data-e="3" aria-pressed="true">Invierno</button>
+    <section class="seccion">
+      <div class="et"><span id="et-estacion">Estación</span><span class="actual" id="estacion-nom" aria-live="polite">Invierno</span></div>
+      <div class="estaciones" role="group" aria-labelledby="et-estacion">
+        <button id="e-0" data-e="0" aria-pressed="false" aria-label="Primavera" title="Primavera"><svg viewBox="0 0 24 24" aria-hidden="true"><g><circle cx="12" cy="6.6" r="2.8" transform="rotate(0 12 12)"/><circle cx="12" cy="6.6" r="2.8" transform="rotate(72 12 12)"/><circle cx="12" cy="6.6" r="2.8" transform="rotate(144 12 12)"/><circle cx="12" cy="6.6" r="2.8" transform="rotate(216 12 12)"/><circle cx="12" cy="6.6" r="2.8" transform="rotate(288 12 12)"/><circle cx="12" cy="12" r="1.9"/></g></svg></button>
+        <button id="e-1" data-e="1" aria-pressed="false" aria-label="Verano" title="Verano"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></button>
+        <button id="e-2" data-e="2" aria-pressed="false" aria-label="Otoño" title="Otoño"><svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linejoin="miter" stroke-miterlimit="6" d="M12 2.2l1.5 3 1.9-.9-.6 4.6 3-2.5.8 1.7 2.9-.6-1 3.1 1.4.8-4.3 3.4.6 1.9-5.4-.8h-1.6l-5.4.8.6-1.9-4.3-3.4 1.4-.8-1-3.1 2.9.6.8-1.7 3 2.5-.6-4.6 1.9.9z"/><path d="M12 15.7V21.8"/></svg></button>
+        <button id="e-3" data-e="3" aria-pressed="true" aria-label="Invierno" title="Invierno"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(0 12 12)"/><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(60 12 12)"/><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(120 12 12)"/><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(180 12 12)"/><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(240 12 12)"/><path d="M12 12V2.8M9.5 4.9L12 7.2l2.5-2.3" transform="rotate(300 12 12)"/></svg></button>
       </div>
+    </section>
+
+    <section class="seccion">
+      <div class="et"><label for="exag">Exageración vertical</label><span class="valor" id="exag-v">×2,0</span></div>
+      <input id="exag" type="range" min="1" max="4" step="0.1" value="2">
+      <div class="marcas" aria-hidden="true"><span>Real</span><span>×2</span><span>×3</span><span>×4</span></div>
+    </section>
     </div>
+
     <div class="grupo">
-      <div class="et"><label for="exag">Exageración del relieve</label></div>
-      <div class="fila"><input id="exag" type="range" min="1" max="4" step="0.1" value="2"><span class="valor" id="exag-v">×2,0</span></div>
+    <section class="seccion">
+      <div class="et">Capas</div>
+      <div class="capas">
+        <label class="capa"><input type="checkbox" id="c-picos" checked><span class="muestra"><span class="m-pico"></span></span><span class="nom">Cumbres</span></label>
+        <label class="capa"><input type="checkbox" id="c-pueblos" checked><span class="muestra"><span class="m-pueblo"></span></span><span class="nom">Madrid y pueblos</span></label>
+        <label class="capa"><input type="checkbox" id="c-rios" checked><span class="muestra"><span class="m-rio"></span></span><span class="nom">Ríos</span></label>
+        <label class="capa"><input type="checkbox" id="c-embalses" checked><span class="muestra"><span class="m-embalse"></span></span><span class="nom">Embalses</span></label>
+        <label class="capa"><input type="checkbox" id="c-limite" checked><span class="muestra"><span class="m-limite"></span></span><span class="nom">Límites<small>Comunidad y municipios</small></span></label>
+      </div>
+    </section>
+
+    <section class="seccion">
+      <div class="et"><label for="vistas-sel" id="et-ir">Ir a</label></div>
+      <div class="vistas" id="vistas" role="group" aria-labelledby="et-ir"></div>
+      <select class="vistas-sel" id="vistas-sel"></select>
+    </section>
     </div>
-    <div class="grupo">
-      <div class="et">Nombres y capas</div>
-      <label class="chk"><input type="checkbox" id="c-picos" checked> Picos</label>
-      <label class="chk"><input type="checkbox" id="c-pueblos" checked> Madrid y pueblos</label>
-      <label class="chk"><input type="checkbox" id="c-rios" checked> Ríos</label>
-      <label class="chk"><input type="checkbox" id="c-embalses" checked> Embalses</label>
-      <label class="chk"><input type="checkbox" id="c-limite" checked> Límite de la Comunidad</label>
+
+    <div class="pie">
+      <dl class="gestos gestos-raton">
+        <dt>Arrastrar</dt><dd>girar</dd>
+        <dt>Clic derecho</dt><dd>desplazar</dd>
+        <dt>Rueda</dt><dd>acercar o alejar</dd>
+      </dl>
+      <dl class="gestos gestos-tactil">
+        <dt>Un dedo</dt><dd>girar</dd>
+        <dt>Dos dedos</dt><dd>desplazar y pellizcar para acercar</dd>
+      </dl>
+      <details>
+        <summary>Fuentes de datos</summary>
+        <p>Relieve: MDT25 © Instituto Geográfico Nacional (CC BY 4.0). Suelo: CORINE Land Cover, Copernicus. Nombres: © colaboradores de OpenStreetMap (ODbL). Límites municipales: recintos municipales © Instituto Geográfico Nacional (CC BY 4.0), versión simplificada de es-atlas. Colores de estación y nieve estimados por reglas.</p>
+      </details>
     </div>
-    <div class="grupo">
-      <div class="et">Ir a</div>
-      <div class="vistas" id="vistas"></div>
-    </div>
-    <p class="ayuda">Arrastrá para girar, con dos dedos o botón derecho para desplazar, rueda o pellizco para acercar.</p>
-    <p class="fuentes">Relieve: MDT25 © Instituto Geográfico Nacional (CC BY 4.0). Suelo: CORINE Land Cover, Copernicus. Nombres: © colaboradores de OpenStreetMap (ODbL). Colores de estación y nieve estimados por reglas.</p>
   </div>
 </aside>
 
@@ -227,7 +337,7 @@ async function iniciar() {
 }
 
 async function capa(nombre) {
-  if (!imagenes[nombre]) imagenes[nombre] = await cargarImagen(`datos/${nombre}.${nombre.match(/rios|limite/) ? "png" : "jpg"}`);
+  if (!imagenes[nombre]) imagenes[nombre] = await cargarImagen(`datos/${nombre}.${nombre.match(/rios|limite|municipios/) ? "png" : "jpg"}`);
   return imagenes[nombre];
 }
 
@@ -236,13 +346,17 @@ async function componerTextura() {
   if (lienzo.width !== base.width) { lienzo.width = base.width; lienzo.height = base.height; }
   ctx.drawImage(base, 0, 0);
   if (capas.rios) ctx.drawImage(await capa("rios"), 0, 0, lienzo.width, lienzo.height);
-  if (capas.limite) ctx.drawImage(await capa("limite"), 0, 0, lienzo.width, lienzo.height);
+  if (capas.limite) {
+    ctx.drawImage(await capa("municipios"), 0, 0, lienzo.width, lienzo.height);
+    ctx.drawImage(await capa("limite"), 0, 0, lienzo.width, lienzo.height);
+  }
   texturaTerreno.needsUpdate = true;
 }
 
 async function ponerEstacion(e) {
   estacion = e;
   document.querySelectorAll(".estaciones button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.e === e)));
+  document.getElementById("estacion-nom").textContent = document.getElementById("e-" + e).getAttribute("aria-label");
   const L = LUZ[e];
   const el = THREE.MathUtils.degToRad(L.el), az = THREE.MathUtils.degToRad(L.az);
   sol.position.set(Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)).multiplyScalar(300);
@@ -312,8 +426,8 @@ function actualizarRotulos() {
         else {
           if ((cuadro + rotulos.indexOf(o)) % 6 === 0) o.libre = visibleDesdeCamara(r.x, r.y, z + 0.02);
           if (o.libre === false) mostrar = false;
-          const sx = (vtmp.x + 1) / 2 * W, sy = (1 - vtmp.y) / 2 * H - 9;
-          d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`;
+          const sx = (vtmp.x + 1) / 2 * W, sy = (1 - vtmp.y) / 2 * H - 10;
+          d.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, -100%)`;
         }
       }
     }
@@ -323,14 +437,28 @@ function actualizarRotulos() {
 
 // ---- Vistas guardadas con transición.
 let transicion = null;
+const selVistas = document.getElementById("vistas-sel");
 function crearVistas() {
   const cont = document.getElementById("vistas");
+  const libre = document.createElement("option");
+  libre.value = ""; libre.textContent = "Vista libre"; libre.disabled = true; libre.hidden = true;
+  selVistas.appendChild(libre);
   datos.vistas.forEach((v, i) => {
     const b = document.createElement("button"); b.id = "v-" + i; b.textContent = v.nombre;
+    b.setAttribute("aria-pressed", "false");
     b.addEventListener("click", () => irA(i, true));
     cont.appendChild(b);
+    const op = document.createElement("option"); op.value = i; op.textContent = v.nombre;
+    selVistas.appendChild(op);
   });
+  selVistas.addEventListener("change", () => { if (selVistas.value !== "") irA(+selVistas.value, true); });
 }
+// Marca el destino en el que estamos; -1 cuando la cámara se movió a mano.
+function marcarVista(i) {
+  document.querySelectorAll("#vistas button").forEach((b, k) => b.setAttribute("aria-pressed", String(k === i)));
+  selVistas.value = i >= 0 ? String(i) : "";
+}
+controles.addEventListener("start", () => { transicion = null; marcarVista(-1); });
 function destinoVista(i) {
   const v = datos.vistas[i];
   const [ox, oy, oz] = v.objetivo, [cx, cy, cz] = v.camara;
@@ -340,6 +468,7 @@ function destinoVista(i) {
 }
 function irA(i, animado) {
   const { obj, pos } = destinoVista(i);
+  marcarVista(i);
   if (!animado || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     camara.position.copy(pos); controles.target.copy(obj); controles.update(); return;
   }
@@ -386,13 +515,17 @@ for (const k of Object.keys(capas)) {
   });
 }
 const panel = document.getElementById("panel"), plegar = document.getElementById("plegar");
-plegar.addEventListener("click", () => {
-  const p = panel.classList.toggle("plegado");
-  plegar.textContent = p ? "mostrar" : "ocultar"; plegar.setAttribute("aria-expanded", String(!p));
-});
+function ponerPlegado(p) {
+  panel.classList.toggle("plegado", p);
+  plegar.setAttribute("aria-expanded", String(!p));
+  plegar.setAttribute("aria-label", p ? "Mostrar controles" : "Ocultar controles");
+}
+plegar.addEventListener("click", () => ponerPlegado(!panel.classList.contains("plegado")));
+if (movil) ponerPlegado(true);   // en el teléfono, el mapa primero
 addEventListener("resize", () => {
   camara.aspect = innerWidth / innerHeight; camara.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
 });
 
 iniciar().catch(err => { document.getElementById("carga").textContent = "No se pudo cargar el relieve: " + err.message; });
 </script>
+</html>
