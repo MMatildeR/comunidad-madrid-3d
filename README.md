@@ -56,6 +56,7 @@ NOTES.md      decisiones y supuestos
 - Relieve: MDT25 © Instituto Geográfico Nacional, CC BY 4.0.
 - Ocupación del suelo: CORINE Land Cover, programa Copernicus de la Unión Europea, a través de los servicios del IGN.
 - Límite, ríos, embalses, picos y núcleos: © colaboradores de OpenStreetMap, ODbL. `data/capas.json` y `web/visor/datos/capas.json` son bases de datos derivadas y quedan bajo ODbL.
+- Límites municipales: recintos municipales © Instituto Geográfico Nacional, CC BY 4.0, en la versión simplificada del paquete `es-atlas`; la textura `web/visor/datos/municipios.png` sale de `scripts/limites_municipales.py`.
 - Tipografías: Chonburi (Cadson Demak) y Atkinson Hyperlegible (Braille Institute), SIL Open Font License; sus licencias están en `fonts/`.
 
 Autora: Matilde.
