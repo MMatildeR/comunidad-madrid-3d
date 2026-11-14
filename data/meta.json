@@ -1,0 +1,26 @@
+{
+ "crs": "EPSG:25830",
+ "res_m": 25,
+ "x_min": 360000,
+ "y_max": 4570000,
+ "ancho": 5600,
+ "alto": 6400,
+ "clases_suelo": [
+  "fuera",
+  "urbano",
+  "suelo_desnudo",
+  "cereal",
+  "regadio",
+  "olivar_vina",
+  "prados",
+  "mosaico_cultivos",
+  "dehesa",
+  "frondosas",
+  "coniferas",
+  "mixto",
+  "pastizal",
+  "matorral",
+  "roca",
+  "agua"
+ ]
+}

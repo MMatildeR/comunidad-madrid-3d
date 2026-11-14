@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Madrid en relieve 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chonburi&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Relieve a pantalla completa; panel de papel claro arriba a la izquierda; rótulos como en un mapa */
+:root {
+  --papel: rgba(246, 246, 242, 0.92); --tinta: #20251f; --suave: #5d655a; --linea: #cfd3c8; --acento: #2f5d4d;
+  --cielo-alto: #8fb0cf; --cielo-bajo: #e9eef1;
+  --serif: "Chonburi", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; overflow: hidden; background: var(--cielo-bajo); color: var(--tinta); font: 14px/1.5 var(--sans); }
+#escena { position: fixed; inset: 0; background: linear-gradient(180deg, var(--cielo-alto) 0%, var(--cielo-bajo) 62%); }
+#escena canvas { display: block; }
+#rotulos { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.r { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; color: #fff; transform-origin: 50% 100%;
+  text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); transition: opacity .25s; will-change: transform; }
+.r::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 5px; height: 5px; margin-left: -2.5px;
+  border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+.r.pico { font: 400 14px var(--serif); letter-spacing: .01em; }
+.r.pico::after { background: #222; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
+.r.pico span { font-style: normal; font-size: 12px; opacity: .85; margin-left: .35em; }
+.r.pueblo { font: 700 12.5px var(--sans); }
+.r.ciudad { font: 700 14px var(--sans); }
+.r.capital { font: 400 18px var(--serif); letter-spacing: .14em; }
+
+#panel { position: fixed; z-index: 2; background: var(--papel); backdrop-filter: blur(6px);
+  top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(14px, env(safe-area-inset-left, 0px));
+  width: 17.5rem; max-height: calc(100% - 28px); overflow: auto; padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid var(--linea); }
+h1 { font: 400 1.35rem/1.15 var(--serif); margin: 0 0 .15rem; }
+.sub { color: var(--suave); font-size: .85rem; margin: 0 0 .9rem; }
+.grupo { border-top: 1px solid var(--linea); padding-top: .65rem; margin-top: .65rem; }
+.et { font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; color: var(--suave); margin-bottom: .35rem; }
+.estaciones { display: flex; flex-wrap: wrap; gap: .1rem .9rem; }
+button { font: 700 .92rem var(--sans); color: var(--tinta); background: none; border: 0; padding: .1rem 0; cursor: pointer; }
+.estaciones button { border-bottom: 2px solid transparent; }
+.estaciones button[aria-pressed="true"] { color: var(--acento); border-bottom-color: var(--acento); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.fila { display: flex; align-items: center; gap: .6rem; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--acento); }
+.valor { font-variant-numeric: tabular-nums; width: 2.6rem; text-align: right; }
+label.chk { display: flex; align-items: center; gap: .5rem; padding: .12rem 0; cursor: pointer; }
+input[type=checkbox] { accent-color: var(--acento); width: 1rem; height: 1rem; margin: 0; }
+.vistas { display: grid; grid-template-columns: 1fr 1fr; gap: .15rem .8rem; }
+.vistas button { font-weight: 400; text-align: left; color: var(--acento); }
+.vistas button:hover { text-decoration: underline; }
+.ayuda { color: var(--suave); font-size: .8rem; margin-top: .8rem; }
+.fuentes { color: var(--suave); font-size: .72rem; margin-top: .5rem; }
+#plegar { display: none; float: right; font-weight: 400; color: var(--suave); }
+#carga { position: fixed; inset: 0; display: grid; place-items: center; z-index: 3; pointer-events: none;
+  font: 400 1.2rem var(--serif); color: var(--tinta); }
+
+@media (max-width: 640px) {
+  #panel { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); left: max(10px, env(safe-area-inset-left, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px)); width: auto; max-height: 55%; padding: .8rem .9rem; }
+  #plegar { display: inline; }
+  #panel.plegado .cuerpo { display: none; }
+  .sub { margin-bottom: .3rem; }
+}
+@media (prefers-reduced-motion: reduce) { .r { transition: none; } }
+</style>
+
+<div id="escena"></div>
+<div id="rotulos"></div>
+<div id="carga">Cargando el relieve…</div>
+
+<aside id="panel">
+  <button id="plegar" aria-expanded="true">ocultar</button>
+  <h1>Madrid en relieve</h1>
+  <p class="sub">La Comunidad de Madrid y su sierra, del Tajo (377 m) a Peñalara (2.428 m)</p>
+  <div class="cuerpo">
+    <div class="grupo">
+      <div class="et">Estación</div>
+      <div class="estaciones" role="group" aria-label="Estación">
+        <button id="e-0" data-e="0" aria-pressed="false">Primavera</button>
+        <button id="e-1" data-e="1" aria-pressed="false">Verano</button>
+        <button id="e-2" data-e="2" aria-pressed="false">Otoño</button>
+        <button id="e-3" data-e="3" aria-pressed="true">Invierno</button>
+      </div>
+    </div>
+    <div class="grupo">
+      <div class="et"><label for="exag">Exageración del relieve</label></div>
+      <div class="fila"><input id="exag" type="range" min="1" max="4" step="0.1" value="2"><span class="valor" id="exag-v">×2,0</span></div>
+    </div>
+    <div class="grupo">
+      <div class="et">Nombres y capas</div>
+      <label class="chk"><input type="checkbox" id="c-picos" checked> Picos</label>
+      <label class="chk"><input type="checkbox" id="c-pueblos" checked> Madrid y pueblos</label>
+      <label class="chk"><input type="checkbox" id="c-rios" checked> Ríos</label>
+      <label class="chk"><input type="checkbox" id="c-embalses" checked> Embalses</label>
+      <label class="chk"><input type="checkbox" id="c-limite" checked> Límite de la Comunidad</label>
+    </div>
+    <div class="grupo">
+      <div class="et">Ir a</div>
+      <div class="vistas" id="vistas"></div>
+    </div>
+    <p class="ayuda">Arrastrá para girar, con dos dedos o botón derecho para desplazar, rueda o pellizco para acercar.</p>
+    <p class="fuentes">Relieve: MDT25 © Instituto Geográfico Nacional (CC BY 4.0). Suelo: CORINE Land Cover, Copernicus. Nombres: © colaboradores de OpenStreetMap (ODbL). Colores de estación y nieve estimados por reglas.</p>
+  </div>
+</aside>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const ESTACIONES = ["primavera", "verano", "otono", "invierno"];
+// Sol: elevación, azimut (desde el norte), color, intensidad; cielo y neblina.
+const LUZ = [
+  { el: 42, az: 195, sol: 0xfff3e2, i: 3.0, cieloAlto: "#86aed6", cieloBajo: "#e6edf0", neb: 0xdfe6ea, hemi: [0xcfe0f0, 0x6b6550] },
+  { el: 60, az: 210, sol: 0xfff6ea, i: 3.2, cieloAlto: "#93b4d2", cieloBajo: "#eceae4", neb: 0xe6e4dd, hemi: [0xd6e2ee, 0x7a6f55] },
+  { el: 30, az: 200, sol: 0xffdcb0, i: 2.8, cieloAlto: "#8aa9c6", cieloBajo: "#ece5da", neb: 0xe4ddd2, hemi: [0xd2dbe4, 0x6e5f4a] },
+  { el: 19, az: 205, sol: 0xffd6ad, i: 2.7, cieloAlto: "#7fa4cb", cieloBajo: "#e8eef3", neb: 0xe0e8ef, hemi: [0xc9daec, 0x5d6066] },
+];
+const DIST_ROTULO = 45, Z_REF = 300;
+const movil = Math.min(innerWidth, innerHeight) < 700;
+
+const contenedor = document.getElementById("escena");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, movil ? 1.5 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.AgXToneMapping ?? THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.55;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+contenedor.appendChild(renderer.domElement);
+
+const escena = new THREE.Scene();
+const camara = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 2500);
+camara.up.set(0, 0, 1);
+const controles = new OrbitControls(camara, renderer.domElement);
+controles.enableDamping = true; controles.dampingFactor = 0.08;
+controles.maxPolarAngle = THREE.MathUtils.degToRad(86);
+controles.minDistance = 0.8; controles.maxDistance = 420;
+controles.zoomSpeed = 1.1;
+
+const sol = new THREE.DirectionalLight(0xffffff, 3);
+sol.castShadow = true;
+sol.shadow.mapSize.set(movil ? 2048 : 4096, movil ? 2048 : 4096);
+Object.assign(sol.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 1, far: 800 });
+sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.04;
+escena.add(sol, sol.target);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x666655, 1.6);
+hemi.position.set(0, 0, 1);
+escena.add(hemi);
+escena.fog = new THREE.Fog(0xe0e8ef, 60, 480);
+
+let datos, alturas, aw, ah, exag = 2, estacion = 3;
+const capas = { picos: true, pueblos: true, rios: true, embalses: true, limite: true };
+const grupoZ = new THREE.Group();   // todo lo que escala en Z con la exageración
+escena.add(grupoZ);
+let terreno, lienzo, ctx, texturaTerreno;
+const imagenes = {};
+
+const cargarImagen = src => new Promise((ok, mal) => { const im = new Image(); im.onload = () => ok(im); im.onerror = mal; im.src = src; });
+
+async function iniciar() {
+  datos = await (await fetch("datos/capas.json")).json();
+  const m = datos.meta;
+  const imAlt = await cargarImagen("datos/altura.png");
+  aw = imAlt.width; ah = imAlt.height;
+  const c = document.createElement("canvas"); c.width = aw; c.height = ah;
+  const cx = c.getContext("2d", { willReadFrequently: true }); cx.drawImage(imAlt, 0, 0);
+  const px = cx.getImageData(0, 0, aw, ah).data;
+  alturas = new Float32Array(aw * ah);
+  for (let i = 0; i < aw * ah; i++) alturas[i] = (px[i * 4] * 256 + px[i * 4 + 1]) / 10;
+
+  // Malla del terreno (en móvil, a la mitad de resolución).
+  const paso = movil ? 2 : 1;
+  const gx = Math.floor((aw - 1) / paso), gy = Math.floor((ah - 1) / paso);
+  const geo = new THREE.PlaneGeometry(m.ancho_km, m.alto_km, gx, gy);
+  const pos = geo.attributes.position;
+  for (let iy = 0, k = 0; iy <= gy; iy++) for (let ix = 0; ix <= gx; ix++, k++) {
+    pos.setZ(k, (alturas[iy * paso * aw + ix * paso] - Z_REF) / 1000);
+  }
+  geo.computeVertexNormals();
+  lienzo = document.createElement("canvas");
+  ctx = lienzo.getContext("2d");
+  texturaTerreno = new THREE.CanvasTexture(lienzo);
+  texturaTerreno.colorSpace = THREE.SRGBColorSpace;
+  texturaTerreno.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  terreno = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: texturaTerreno, roughness: 0.95, metalness: 0 }));
+  terreno.position.set(m.centro_km[0], m.centro_km[1], 0);
+  terreno.castShadow = terreno.receiveShadow = true;
+  grupoZ.add(terreno);
+
+  // Plano de fondo hasta el horizonte.
+  const fondo = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(150/255, 152/255, 150/255, THREE.SRGBColorSpace), roughness: 1 }));
+  fondo.position.z = (180 - Z_REF) / 1000 - 0.013;
+  fondo.receiveShadow = true;
+  grupoZ.add(fondo);
+
+  // Embalses.
+  const matAgua = new THREE.MeshStandardMaterial({ color: 0x23465c, roughness: 0.3, metalness: 0 });
+  const grupoAgua = new THREE.Group(); grupoAgua.name = "embalses";
+  for (const e of datos.embalses) {
+    const forma = new THREE.Shape(e.anillo.map(([x, y]) => new THREE.Vector2(x, y)));
+    const me = new THREE.Mesh(new THREE.ShapeGeometry(forma), matAgua);
+    me.position.z = (e.nivel - Z_REF) / 1000;
+    me.receiveShadow = true;
+    grupoAgua.add(me);
+  }
+  grupoZ.add(grupoAgua);
+
+  crearRotulos();
+  crearVistas();
+  await ponerEstacion(3);
+  irA(0, false);
+  ponerExag(2);
+  document.getElementById("carga").hidden = true;
+  animar();
+  // Precarga del resto de estaciones.
+  for (const e of [0, 1, 2]) cargarImagen(`datos/${ESTACIONES[e]}.jpg`).then(im => imagenes[ESTACIONES[e]] = im);
+}
+
+async function capa(nombre) {
+  if (!imagenes[nombre]) imagenes[nombre] = await cargarImagen(`datos/${nombre}.${nombre.match(/rios|limite/) ? "png" : "jpg"}`);
+  return imagenes[nombre];
+}
+
+async function componerTextura() {
+  const base = await capa(ESTACIONES[estacion]);
+  if (lienzo.width !== base.width) { lienzo.width = base.width; lienzo.height = base.height; }
+  ctx.drawImage(base, 0, 0);
+  if (capas.rios) ctx.drawImage(await capa("rios"), 0, 0, lienzo.width, lienzo.height);
+  if (capas.limite) ctx.drawImage(await capa("limite"), 0, 0, lienzo.width, lienzo.height);
+  texturaTerreno.needsUpdate = true;
+}
+
+async function ponerEstacion(e) {
+  estacion = e;
+  document.querySelectorAll(".estaciones button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.e === e)));
+  const L = LUZ[e];
+  const el = THREE.MathUtils.degToRad(L.el), az = THREE.MathUtils.degToRad(L.az);
+  sol.position.set(Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)).multiplyScalar(300);
+  sol.color.setHex(L.sol); sol.intensity = L.i;
+  hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]);
+  escena.fog.color.setHex(L.neb);
+  document.documentElement.style.setProperty("--cielo-alto", L.cieloAlto);
+  document.documentElement.style.setProperty("--cielo-bajo", "#" + L.neb.toString(16).padStart(6, "0"));
+  await componerTextura();
+}
+
+function ponerExag(v) {
+  exag = v;
+  grupoZ.scale.z = v;
+  document.getElementById("exag-v").textContent = "×" + v.toFixed(1).replace(".", ",");
+}
+
+function alturaEn(x, y) {   // m, interpolación bilineal
+  const m = datos.meta;
+  const u = (x - (m.centro_km[0] - m.ancho_km / 2)) / m.ancho_km * (aw - 1);
+  const v = ((m.centro_km[1] + m.alto_km / 2) - y) / m.alto_km * (ah - 1);
+  if (u < 0 || v < 0 || u > aw - 1 || v > ah - 1) return 180;
+  const i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+  const a = alturas[j * aw + i], b = alturas[j * aw + Math.min(i + 1, aw - 1)];
+  const c = alturas[Math.min(j + 1, ah - 1) * aw + i], d = alturas[Math.min(j + 1, ah - 1) * aw + Math.min(i + 1, aw - 1)];
+  return (a * (1 - fu) + b * fu) * (1 - fv) + (c * (1 - fu) + d * fu) * fv;
+}
+const zLocal = hm => (hm - Z_REF) / 1000 * exag;
+
+// ---- Rótulos HTML con ocultación por el relieve.
+const rotulos = [];
+function crearRotulos() {
+  const capaDiv = document.getElementById("rotulos");
+  for (const r of datos.rotulos) {
+    const d = document.createElement("div");
+    d.className = "r " + r.tipo;
+    if (r.tipo === "pico") { d.textContent = r.nombre; const s = document.createElement("span"); s.textContent = r.ele.toLocaleString("es-ES"); d.appendChild(s); }
+    else d.textContent = r.tipo === "capital" ? r.nombre.toUpperCase() : r.nombre;
+    capaDiv.appendChild(d);
+    rotulos.push({ r, d, capa: r.tipo === "pico" ? "picos" : "pueblos", visible: false });
+  }
+}
+const vtmp = new THREE.Vector3();
+function visibleDesdeCamara(x, y, z) {
+  const c = camara.position, n = 28;
+  for (let k = 1; k < n; k++) {
+    const t = k / n, px = c.x + (x - c.x) * t, py = c.y + (y - c.y) * t, pz = c.z + (z - c.z) * t;
+    if (zLocal(alturaEn(px, py)) > pz + 0.01) return false;
+  }
+  return true;
+}
+let cuadro = 0;
+function actualizarRotulos() {
+  const W = innerWidth, H = innerHeight;
+  cuadro++;
+  for (const o of rotulos) {
+    const { r, d } = o;
+    let mostrar = capas[o.capa];
+    if (mostrar) {
+      const z = zLocal(r.z);
+      vtmp.set(r.x, r.y, z);
+      const dist = camara.position.distanceTo(vtmp);
+      if (!r.siempre && dist > DIST_ROTULO) mostrar = false;
+      if (mostrar) {
+        vtmp.project(camara);
+        if (vtmp.z > 1 || Math.abs(vtmp.x) > 1.1 || Math.abs(vtmp.y) > 1.1) mostrar = false;
+        else {
+          if ((cuadro + rotulos.indexOf(o)) % 6 === 0) o.libre = visibleDesdeCamara(r.x, r.y, z + 0.02);
+          if (o.libre === false) mostrar = false;
+          const sx = (vtmp.x + 1) / 2 * W, sy = (1 - vtmp.y) / 2 * H - 9;
+          d.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`;
+        }
+      }
+    }
+    d.style.opacity = mostrar ? 1 : 0;
+  }
+}
+
+// ---- Vistas guardadas con transición.
+let transicion = null;
+function crearVistas() {
+  const cont = document.getElementById("vistas");
+  datos.vistas.forEach((v, i) => {
+    const b = document.createElement("button"); b.id = "v-" + i; b.textContent = v.nombre;
+    b.addEventListener("click", () => irA(i, true));
+    cont.appendChild(b);
+  });
+}
+function destinoVista(i) {
+  const v = datos.vistas[i];
+  const [ox, oy, oz] = v.objetivo, [cx, cy, cz] = v.camara;
+  const obj = new THREE.Vector3(ox, oy, zLocal(oz));
+  const pos = new THREE.Vector3(cx, cy, Math.max(zLocal(cz), zLocal(oz)) + v.h);
+  return { obj, pos };
+}
+function irA(i, animado) {
+  const { obj, pos } = destinoVista(i);
+  if (!animado || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    camara.position.copy(pos); controles.target.copy(obj); controles.update(); return;
+  }
+  transicion = { t0: performance.now(), dur: 1600, p0: camara.position.clone(), o0: controles.target.clone(), p1: pos, o1: obj };
+}
+
+function mantenerSobreTerreno() {
+  const suelo = zLocal(alturaEn(camara.position.x, camara.position.y)) + 0.25;
+  if (camara.position.z < suelo) camara.position.z = suelo;
+}
+
+function animar() {
+  requestAnimationFrame(animar);
+  if (transicion) {
+    let t = Math.min((performance.now() - transicion.t0) / transicion.dur, 1);
+    const s = t * t * (3 - 2 * t);
+    camara.position.lerpVectors(transicion.p0, transicion.p1, s);
+    // Arco: sube un poco a mitad de camino para no atravesar montañas.
+    camara.position.z += Math.sin(Math.PI * s) * transicion.p0.distanceTo(transicion.p1) * 0.25;
+    controles.target.lerpVectors(transicion.o0, transicion.o1, s);
+    if (t >= 1) transicion = null;
+  }
+  controles.update();
+  mantenerSobreTerreno();
+  // La sombra sigue a lo que se mira.
+  const L = LUZ[estacion], el = THREE.MathUtils.degToRad(L.el), az = THREE.MathUtils.degToRad(L.az);
+  sol.target.position.copy(controles.target);
+  sol.position.set(Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)).multiplyScalar(300).add(controles.target);
+  const alcance = THREE.MathUtils.clamp(camara.position.distanceTo(controles.target) * 1.6, 12, 110);
+  Object.assign(sol.shadow.camera, { left: -alcance, right: alcance, top: alcance, bottom: -alcance });
+  sol.shadow.camera.updateProjectionMatrix();
+  renderer.render(escena, camara);
+  actualizarRotulos();
+}
+
+// ---- Controles del panel.
+document.querySelectorAll(".estaciones button").forEach(b => b.addEventListener("click", () => ponerEstacion(+b.dataset.e)));
+document.getElementById("exag").addEventListener("input", e => ponerExag(+e.target.value));
+for (const k of Object.keys(capas)) {
+  document.getElementById("c-" + k).addEventListener("change", e => {
+    capas[k] = e.target.checked;
+    if (k === "embalses") grupoZ.getObjectByName("embalses").visible = capas[k];
+    if (k === "rios" || k === "limite") componerTextura();
+  });
+}
+const panel = document.getElementById("panel"), plegar = document.getElementById("plegar");
+plegar.addEventListener("click", () => {
+  const p = panel.classList.toggle("plegado");
+  plegar.textContent = p ? "mostrar" : "ocultar"; plegar.setAttribute("aria-expanded", String(!p));
+});
+addEventListener("resize", () => {
+  camara.aspect = innerWidth / innerHeight; camara.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+});
+
+iniciar().catch(err => { document.getElementById("carga").textContent = "No se pudo cargar el relieve: " + err.message; });
+</script>
