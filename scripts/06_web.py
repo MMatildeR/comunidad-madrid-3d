@@ -56,7 +56,7 @@ def main():
         a = a * t[..., None] + FONDO * (1 - t[..., None])
         Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(OUT / f"{est}.jpg", quality=86, optimize=True)
 
-    for capa, color in (("rios", (24, 62, 92)), ("limite", (128, 22, 34))):
+    for capa, color in (("rios", (24, 62, 92)), ("limite", (96, 17, 26))):
         g = np.asarray(Image.open(TEX / f"{capa}.png").resize((tw, th), Image.LANCZOS), np.float32)
         alfa = np.clip(g * (1.6 if capa == "rios" else 1.2), 0, 255).astype(np.uint8)
         rgba = np.zeros((th, tw, 4), np.uint8)
